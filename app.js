@@ -1,7 +1,7 @@
 /* Whist Coach — interface. Rekenlogica zit in engine.js, fotoherkenning in detector.js. */
 (function () {
   const E = window.WiezenEngine;
-  const SUIT_ORDER = [2, 1, 3, 0];            // altijd: harten, ruiten, schoppen, klaveren
+  const SUIT_ORDER = [2, 3, 1, 0];            // altijd: harten, schoppen, ruiten, klaveren (rood en zwart wisselen af)
   const RANKS = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
   const RL = { 14: 'A', 13: 'H', 12: 'V', 11: 'B' };
   const TXT = '︎';                       // dwingt het tekstsymbool af (geen emoji op iOS)
