@@ -1,0 +1,11 @@
+{
+  "name": "whist-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Slaagkans en verwachte punten per contract bij wiezen (Belgische whist, IWWA-regels).",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "test": "node test/run.js",
+    "start": "npx --yes serve -l 5173 ."
+  }
+}
