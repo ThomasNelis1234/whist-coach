@@ -6,14 +6,14 @@
 
   const SUIT_SYM = ['♣', '♦', '♥', '♠'];
   const SUIT_NAME = ['klaveren', 'ruiten', 'harten', 'schoppen'];
-  const RANK_SYM = { 11: 'B', 12: 'D', 13: 'H', 14: 'A' };
+  const RANK_SYM = { 11: 'B', 12: 'V', 13: 'H', 14: 'A' };
 
   const suitOf = c => (c / 13) | 0;
   const rankOf = c => (c % 13) + 2;
   const mk = (s, r) => s * 13 + r - 2;
   const cardStr = c => SUIT_SYM[suitOf(c)] + (RANK_SYM[rankOf(c)] || rankOf(c));
 
-  /* ---------- puntentabel (Federatie IWWA, versie 1 01-10-2025) ---------- */
+  /* ---------- puntentabel (International World Whist Association, IWWA, versie 1 01-10-2025) ---------- */
   // score van de speler; tegenspelers delen het tegengestelde door 3
   const ALLEEN = [-36, -30, -24, -18, -12, 6, 9, 12, 15, 18, 21, 24, 27, 60];
   // per speler (jij én je partner krijgen dit)

@@ -1,8 +1,8 @@
 # Whist Coach
 
-Hulp bij het bieden in wiezen (Belgische whist, regels en puntentelling Federatie IWWA). Je geeft je 13 kaarten in
+Hulp bij het bieden in wiezen (Belgische whist, regels en puntentelling van de International World Whist Association, IWWA). Je geeft je 13 kaarten in
 (foto of aantikken), de troef op tafel en je plaats ten opzichte van de deler. De app speelt honderden willekeurige
-verdelingen van de overige 39 kaarten uit en toont per contract je slaagkans en verwachte punten.
+verdelingen van de overige 39 kaarten uit en toont per spel je slaagkans en verwachte punten.
 
 Statische PWA zonder build-stap: geen npm-pakketten, geen server, geen API-sleutel.
 
@@ -77,7 +77,7 @@ Open de Vercel-URL in Safari → deelknop → "Zet op beginscherm". De eerste fo
 - Miserie: de tegenspelers weten in welke kleuren je renonce bent. Geen ruil van de keerkaart, geen
   meerdere miseriespelers tegelijk.
 - Troel wordt gemeld (3 of 4 azen) maar niet doorgerekend.
-- Het bieden zelf (wie overbiedt wie) zit er niet in: de app rekent elk contract apart door.
+- Het bieden zelf (wie overbiedt wie) zit er niet in: de app rekent elk spel apart door.
 
 ## Herkenning: wat je mag verwachten
 

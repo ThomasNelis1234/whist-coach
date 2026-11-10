@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Whist Coach</title>
-<meta name="description" content="Slaagkans en verwachte punten per contract bij wiezen, op basis van je 13 kaarten.">
+<meta name="description" content="Slaagkans en verwachte punten per spel bij wiezen, op basis van je 13 kaarten.">
 <meta name="theme-color" content="#1f6b43">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -20,24 +20,29 @@
 <div class="wrap">
   <header>
     <h1>Whist Coach</h1>
-    <p>Neem een foto van je 13 kaarten of tik ze aan, kies de troef op tafel en je plaats. De coach speelt elke verdeling van de overige 39 kaarten honderden keren uit en toont per contract je slaagkans en verwachte punten volgens de IWWA-tabel.</p>
+    <p>Neem een foto van je 13 kaarten, kies de troef op tafel en je plaats, en zie per spel je slaagkans en verwachte punten volgens de puntentabel van de International World Whist Association.</p>
   </header>
 
   <section class="card">
-    <div class="hand-head">
-      <h2 style="margin:0">Jouw kaarten <span id="count" class="count">0/13</span></h2>
+    <h2>Jouw kaarten <span id="count" class="count">0/13</span></h2>
+    <div class="felt">
+      <div id="fan" class="fan" aria-live="polite"></div>
+      <p id="fanEmpty" class="felt-empty">Nog geen kaarten. Neem een foto of kies ze zelf.</p>
+    </div>
+    <div class="tools">
+      <button class="ghost strong" id="btnPhoto" type="button">📷 Foto nemen</button>
+      <input type="file" id="photo" accept="image/*" capture="environment" hidden>
+      <button class="ghost" id="btnEdit" type="button" aria-expanded="false" aria-controls="editor">Kaarten aanpassen</button>
+    </div>
+    <p id="photoMsg" class="hint msg" hidden></p>
+    <div id="editor" class="editor" hidden>
+      <p class="hint">Tik een kaart aan om ze toe te voegen of weg te halen.</p>
+      <div class="rows" id="rows"></div>
       <div class="tools">
-        <button class="ghost" id="btnPhoto" type="button">📷 Foto van je kaarten</button>
-        <input type="file" id="photo" accept="image/*" capture="environment" hidden>
         <button class="ghost" id="btnRandom" type="button">🎲 Willekeurige hand</button>
         <button class="ghost" id="btnExample" type="button">Voorbeeldhand</button>
-        <button class="ghost" id="btnClear" type="button">Wis</button>
+        <button class="ghost" id="btnClear" type="button">Wis alles</button>
       </div>
-    </div>
-    <div class="rows" id="rows"></div>
-    <div id="photoBox" class="photo" hidden>
-      <img id="photoImg" alt="Je foto">
-      <div id="photoMsg" class="hint"></div>
     </div>
   </section>
 
@@ -45,10 +50,10 @@
     <div class="card">
       <h2>Troef op tafel</h2>
       <div class="seg" id="trump">
-        <button type="button" data-v="3" class="big black">♠</button>
-        <button type="button" data-v="2" class="big red">♥</button>
-        <button type="button" data-v="1" class="big red">♦</button>
-        <button type="button" data-v="0" class="big black">♣</button>
+        <button type="button" data-v="2" class="big red" aria-label="harten">♥︎</button>
+        <button type="button" data-v="1" class="big red" aria-label="ruiten">♦︎</button>
+        <button type="button" data-v="3" class="big black" aria-label="schoppen">♠︎</button>
+        <button type="button" data-v="0" class="big black" aria-label="klaveren">♣︎</button>
       </div>
     </div>
     <div class="card">
@@ -62,46 +67,26 @@
     </div>
   </section>
 
-  <section class="card">
-    <div class="run">
-      <button class="primary" id="btnRun" type="button">Bereken kansen</button>
-      <div class="progress"><i id="prog"></i></div>
-      <label class="hint">Verdelingen
-        <select id="nsim" style="margin-left:4px">
-          <option value="300">300 (snel)</option>
-          <option value="600" selected>600</option>
-          <option value="1000">1000</option>
-          <option value="5000">5000</option>
-          <option value="10000">10000 (traag)</option>
-        </select>
-      </label>
-    </div>
-    <p class="hint" id="status" style="margin:10px 0 0">Selecteer 13 kaarten om te starten.</p>
+  <section class="run">
+    <button class="primary" id="btnRun" type="button">Bereken kansen</button>
+    <div class="progress" id="progBox" hidden><i id="prog"></i></div>
+    <p class="hint" id="status"></p>
   </section>
 
-  <div id="troel" class="banner" hidden>
-    <span style="font-size:26px">A</span>
-    <div><strong id="troelTitle">Troel!</strong> <span id="troelText"></span></div>
-  </div>
-
   <section id="resultsWrap" hidden>
-    <div class="hand-head" style="margin-bottom:10px">
-      <h2 style="margin:0">Contracten</h2>
-      <div class="seg" id="sort" style="min-width:260px">
-        <button type="button" data-v="ev" class="on">Verwachte punten</button>
-        <button type="button" data-v="p">Slaagkans</button>
-      </div>
-    </div>
+    <h2>Spellen</h2>
     <div id="results" class="results"></div>
+    <p id="troel" class="note" hidden></p>
   </section>
 
   <footer>
-    Hoe dit werkt: de drie andere handen worden willekeurig gedeeld (de deler krijgt altijd minstens één troef, de keerkaart). Elke hand wordt uitgespeeld door spelers met vaste vuistregels: troef trekken, winnaars incasseren, tweede hand laag, derde hand hoog, bij miserie zo hoog mogelijk onder de slag blijven. Bij miserie op tafel zien de tegenspelers je kaarten.
+    <p>Berekend met 2500 willekeurige verdelingen van de 39 kaarten die je niet ziet. Een slaagkans wijkt daardoor in 95% van de gevallen hoogstens 2 procentpunten af; dat zegt niets over de vuistregels zelf. De spellen staan gerangschikt op verwachte punten (kans × winst − (1 − kans) × verlies); alles onder de stippellijn levert gemiddeld minder op dan passen.</p>
+    <p>Hoe het werkt: de drie andere handen worden willekeurig gedeeld (de deler krijgt altijd minstens één troef, de keerkaart) en uitgespeeld door spelers met vaste vuistregels: troef trekken, winnaars incasseren, tweede hand laag, derde hand hoog, bij miserie zo hoog mogelijk onder de slag blijven.</p>
     <ul>
-      <li>Vragen: de partner is een willekeurige medespeler met minstens één troef. Meegaan: de vrager heeft een echte troefhand (minstens 4 troeven, of 3 met aas of heer). Beide kansen gelden voor 8 slagen samen.</li>
-      <li>Miserie: de tegenspelers komen nooit uit in een kleur waar je renonce bent (geen gratis afgooi) en spelen laag vóór jou, hoog na jou. Bij miserie op tafel kennen ze ook je rangen.</li>
-      <li>Abondance en solo: de troefkleur met de hoogste kans wordt getoond. Verwachte punten = kans × winst − (1 − kans) × verlies.</li>
-      <li>Foto: de knop opent je camera. De herkenning draait volledig op je toestel met een YOLO11-model; de foto wordt nergens naartoe gestuurd. De herkende kaarten komen in de kiezer te staan en kun je corrigeren vóór je rekent.</li>
+      <li>Vragen: de partner is een willekeurige medespeler met minstens één troef. Meegaan: de vrager heeft minstens 4 troeven, of 3 met aas of heer. Beide kansen gelden voor 8 slagen samen.</li>
+      <li>Miserie: de tegenspelers komen nooit uit in een kleur waar je renonce bent en spelen laag vóór jou, hoog na jou. Bij miserie op tafel kennen ze ook je rangen.</li>
+      <li>Abondance en solo: de troefkleur met de hoogste kans wordt getoond.</li>
+      <li>Foto: de herkenning draait volledig op je toestel; de foto wordt nergens naartoe gestuurd.</li>
       <li>Troel wordt alleen gemeld (3 of 4 azen), niet doorgerekend. De ruil van de keerkaart bij miserie zit er nog niet in.</li>
     </ul>
   </footer>
