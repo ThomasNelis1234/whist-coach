@@ -14,8 +14,9 @@ rules). UI text is Dutch; keep it Dutch.
   `suit*13 + rank-2`; suits 0=♣ 1=♦ 2=♥ 3=♠; rank 2..14. Seat 0 = player after the dealer, seat 3 = dealer.
   `createSimulation({hand, tableTrump, position, n, seed})` → `.step(k)` / `.result()`.
 - `detector.js` — on-device card recognition with onnxruntime-web (loaded lazily from jsDelivr) and
-  `model/model.onnx`. Pure helpers (`decode`, `toCards`, `parseCode`, `normalizeClasses`) are unit-tested;
-  the browser part is not.
+  `model/model.onnx`. Inference runs in `detector-worker.js` so the page stays responsive, with a fallback to
+  the main thread. Pure helpers (`decode`, `toCards`, `parseCode`, `normalizeClasses`) are unit-tested; the
+  browser part is not.
 - `app.js` — DOM only. No logic that belongs in the engine.
 - `sw.js` — network-first for app files, cache-first for model/CDN/fonts. Bump `SHELL` when the file list changes.
 
@@ -24,6 +25,8 @@ rules). UI text is Dutch; keep it Dutch.
 - Keep `engine.js` free of DOM access so tests keep running in Node.
 - Scoring tables at the top of `engine.js` come from the IWWA sheet (version 1, 01-10-2025); do not change them
   without the source.
+- Open misère ("miserie op tafel") must never score above closed misère: per deal the declarer has to survive
+  the closed defence, the open defence and a sustained attack in each of his suits. A test guards this.
 - When tuning a heuristic, add or adjust a control hand in `test/run.js` first. The "long hearts with A and K is
   not a misère" test guards a past regression (defenders leading suits the declarer is void in).
 - `model/model.onnx` and `model/model.classes.json` are committed on purpose (Vercel must serve them).

@@ -203,6 +203,8 @@
     const dMax = s => { let m = 0; for (const c of dHand) if (suitOf(c) === s && rankOf(c) > m) m = rankOf(c); return m; };
 
     if (trick.length === 0) {
+      // Aanvalsplan (enkel bij miserie op tafel): blijf één vooraf gekozen kleur laag uitkomen zolang dat kan.
+      if (st.attack >= 0 && groups[st.attack].length && dHas(st.attack)) return lowest(groups[st.attack]);
       // Kies de kleur waarin de miseriespeler het meest kwetsbaar is. Nooit een kleur waar hij renonce is
       // (dat is een gratis afgooi). Open: exacte kennis. Gesloten: kleuren die hij al bekende, anders de
       // kleur waarin ik zelf kort ben (daar zit hij waarschijnlijk lang).
@@ -250,7 +252,8 @@
     const out = [0, 1, 2, 3].map(() => new Array(15).fill(false));
     const voidKnown = [0, 1, 2, 3].map(() => [false, false, false, false]);
     const seen = [0, 1, 2, 3].map(() => [false, false, false, false]); // heeft deze kleur bekend (dus had ze)
-    const st = { trump: opts.trump, sides: opts.sides, out, voidKnown, seen, declarer: opts.declarer, open: !!opts.open, hands };
+    const st = { trump: opts.trump, sides: opts.sides, out, voidKnown, seen, declarer: opts.declarer, open: !!opts.open, hands,
+      attack: opts.attack === undefined ? -1 : opts.attack };
     const tricks = [0, 0, 0, 0];
     let leader = opts.leader;
     const choose = opts.mode === 'misere' ? chooseMisere : chooseTricks;
@@ -310,6 +313,7 @@
     function step(k) {
       for (let i = 0; i < k && done < n; i++, done++) {
         const hands = deal();
+        let misClosed = 0;
         for (const cfg of configs) {
           const sides = [1, 1, 1, 1]; sides[me] = 0;
           let partner = -1, h = hands;
@@ -328,8 +332,24 @@
             partner = pool[(rand() * pool.length) | 0];
             sides[partner] = 0;
           }
-          const tr = playGame(h, { mode: cfg.mode, trump: cfg.trump, sides, leader: cfg.leader, declarer: me, open: cfg.open });
-          const mine = tr[me] + (partner >= 0 ? tr[partner] : 0);
+          const base = { mode: cfg.mode, trump: cfg.trump, sides, leader: cfg.leader, declarer: me, open: cfg.open };
+          let mine;
+          if (cfg.key === 'open') {
+            // Miserie op tafel: de tegenspelers zien je kaarten en kiezen dus het plan dat jou het meest pijn doet.
+            // Je slaagt enkel als je elk plan overleeft: de gewone verdediging (zoals bij gesloten miserie), de
+            // verdediging op zicht, en een volgehouden aanval in elk van je kleuren. Zo kan miserie op tafel
+            // per verdeling nooit beter uitkomen dan gewone miserie.
+            mine = misClosed;
+            if (mine === 0) mine = playGame(h, base)[me];
+            for (let s = 0; s < 4 && mine === 0; s++) {
+              if (!hand.some(c => suitOf(c) === s)) continue;
+              mine = playGame(h, Object.assign({ attack: s }, base))[me];
+            }
+          } else {
+            const tr = playGame(h, base);
+            mine = tr[me] + (partner >= 0 ? tr[partner] : 0);
+            if (cfg.key === 'miserie') misClosed = mine;
+          }
           dist[cfg.key][mine]++;
         }
       }

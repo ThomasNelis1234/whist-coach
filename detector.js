@@ -1,6 +1,7 @@
 /* Whist Coach — kaartherkenning op het toestel.
    Model: sroot/lgd-cards-gen3 (YOLO11s, 52 klassen, AGPL-3.0), als model/model.onnx + model/model.classes.json.
-   Runtime: onnxruntime-web (WASM), bij het eerste gebruik geladen van jsDelivr.
+   Runtime: onnxruntime-web (WASM), bij het eerste gebruik geladen van jsDelivr; het model draait in
+   detector-worker.js zodat de pagina blijft reageren, met terugval op de pagina zelf.
    Het model detecteert hoekindexen (meestal twee per kaart); een kaart zit maar één keer in een hand,
    dus we houden per klasse de detectie met de hoogste score over. */
 (function (root) {
@@ -18,7 +19,7 @@
   const SUITS = { C: 0, D: 1, H: 2, S: 3 };                 // zelfde nummering als engine.js
   const RANKS = { A: 14, K: 13, Q: 12, J: 11, T: 10 };
 
-  let ready = null;      // Promise<{session, classes}>
+  let ready = null;      // Promise<{backend, classes}>
 
   function userError(message, cause) { const e = new Error(message); e.userMessage = message; e.cause = cause; return e; }
 
@@ -120,29 +121,88 @@
     return buf;
   }
 
-  function init(progress) {
+  /* Twee manieren om het model uit te voeren, met dezelfde interface run(Float32Array) -> {data, dims}:
+     - in een worker (voorkeur): de pagina blijft reageren terwijl het model rekent;
+     - in de pagina zelf (terugval): werkt overal, maar de pagina staat even stil per doorgang. */
+  let report = function () {};   // statusmeldingen van de lopende detect()-oproep
+
+  function workerBackend() {
+    return new Promise((resolve, reject) => {
+      let worker, settled = false, watchdog = null, nextId = 1;
+      const pending = new Map();
+      const stop = err => {
+        clearTimeout(watchdog);
+        for (const p of pending.values()) p.reject(err); pending.clear();
+        try { worker && worker.terminate(); } catch (e) { /* al gestopt */ }
+        if (!settled) { settled = true; reject(err); }
+      };
+      const alive = () => { clearTimeout(watchdog); if (!settled) watchdog = setTimeout(() => stop(new Error('worker reageert niet')), 30000); };
+      try { worker = new Worker('detector-worker.js'); } catch (e) { return reject(e); }
+      worker.onerror = e => stop(new Error('worker: ' + (e && e.message)));
+      worker.onmessage = e => {
+        const m = e.data; alive();
+        if (m.type === 'progress') report(m.text);
+        else if (m.type === 'ready') {
+          settled = true; clearTimeout(watchdog);
+          resolve({
+            run: data => new Promise((res, rej) => {
+              const id = nextId++; pending.set(id, { resolve: res, reject: rej });
+              worker.postMessage({ type: 'run', id, data, size: SIZE }, [data.buffer]);
+            }),
+          });
+        }
+        else if (m.type === 'error') { const err = new Error(m.message); err.kind = m.kind; stop(err); }
+        else if (m.type === 'result') { const p = pending.get(m.id); pending.delete(m.id); if (p) p.resolve({ data: m.data, dims: m.dims }); }
+        else if (m.type === 'runerror') { const p = pending.get(m.id); pending.delete(m.id); if (p) p.reject(new Error(m.message)); }
+      };
+      alive();
+      worker.postMessage({ type: 'init', ortBase: ORT_BASE, modelUrl: new URL(MODEL_URL, location.href).href });
+    });
+  }
+
+  async function mainBackend() {
+    if (!root.ort) {
+      report('Herkenningsmotor laden…');
+      try { await loadScript(ORT_BASE + 'ort.min.js'); }
+      catch (e) { throw userError('De herkenningsmotor kon niet geladen worden. Controleer je internetverbinding (enkel de eerste keer nodig).', e); }
+    }
+    root.ort.env.wasm.wasmPaths = ORT_BASE;
+    root.ort.env.wasm.numThreads = 1;
+    let bytes;
+    try { bytes = await fetchWithProgress(MODEL_URL, f => report('Model downloaden… ' + Math.round(f * 100) + '% (eenmalig)')); }
+    catch (e) { throw userError(MODEL_MISSING, e); }
+    report('Model starten…');
+    let session;
+    try { session = await root.ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
+    catch (e) { throw userError('Het model kon niet gestart worden op dit toestel.', e); }
+    return {
+      run: async data => {
+        const out = await session.run({ [session.inputNames[0]]: new root.ort.Tensor('float32', data, [1, 3, SIZE, SIZE]) });
+        const t = out[session.outputNames[0]];
+        return { data: t.data, dims: Array.from(t.dims) };
+      },
+    };
+  }
+
+  const MODEL_MISSING = 'Het herkenningsmodel is niet gevonden. Zet model.onnx en model.classes.json in de map model/ (zie README).';
+
+  function init() {
     if (ready) return ready;
     ready = (async () => {
-      if (!root.ort) {
-        progress('Herkenningsmotor laden…');
-        try { await loadScript(ORT_BASE + 'ort.min.js'); }
-        catch (e) { throw userError('De herkenningsmotor kon niet geladen worden. Controleer je internetverbinding (enkel de eerste keer nodig).', e); }
-      }
-      root.ort.env.wasm.wasmPaths = ORT_BASE;
-      root.ort.env.wasm.numThreads = 1;
-      let classes, bytes;
-      try {
-        classes = normalizeClasses(await (await fetch(CLASSES_URL)).json());
-        bytes = await fetchWithProgress(MODEL_URL, f => progress('Model downloaden… ' + Math.round(f * 100) + '% (eenmalig)'));
-      } catch (e) {
-        throw userError('Het herkenningsmodel is niet gevonden. Zet model.onnx en model.classes.json in de map model/ (zie README).', e);
-      }
+      let classes;
+      try { classes = normalizeClasses(await (await fetch(CLASSES_URL)).json()); }
+      catch (e) { throw userError(MODEL_MISSING, e); }
       if (!classes.some(parseCode)) throw userError('model.classes.json bevat geen kaartcodes zoals "AS" of "10C".');
-      progress('Model starten…');
-      let session;
-      try { session = await root.ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
-      catch (e) { throw userError('Het model kon niet gestart worden op dit toestel.', e); }
-      return { session, classes };
+      let backend;
+      if (root.Worker) {
+        try { backend = await workerBackend(); }
+        catch (e) {
+          if (e && e.kind === 'model') throw userError(MODEL_MISSING, e);
+          console.warn('Herkenning in worker lukt niet, terugval op de pagina zelf:', e);
+        }
+      }
+      if (!backend) backend = await mainBackend();
+      return { backend, classes };
     })();
     ready.catch(() => { ready = null; });   // bij een fout mag een volgende poging opnieuw laden
     return ready;
@@ -160,7 +220,7 @@
   }
 
   // Uitsnede (sx, sy, sw, sh) van het beeld -> letterbox 640×640 -> Float32 CHW in [0,1]
-  function toTensor(bmp, sx, sy, sw, sh) {
+  function toTensorData(bmp, sx, sy, sw, sh) {
     const canvas = document.createElement('canvas'); canvas.width = SIZE; canvas.height = SIZE;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.fillStyle = 'rgb(114,114,114)'; ctx.fillRect(0, 0, SIZE, SIZE);
@@ -168,21 +228,20 @@
     ctx.drawImage(bmp, sx, sy, sw, sh, (SIZE - w) >> 1, (SIZE - h) >> 1, w, h);
     const px = ctx.getImageData(0, 0, SIZE, SIZE).data, n = SIZE * SIZE, data = new Float32Array(3 * n);
     for (let i = 0; i < n; i++) { data[i] = px[i * 4] / 255; data[n + i] = px[i * 4 + 1] / 255; data[2 * n + i] = px[i * 4 + 2] / 255; }
-    return new root.ort.Tensor('float32', data, [1, 3, SIZE, SIZE]);
+    return data;
   }
 
   async function runCrop(m, bmp, sx, sy, sw, sh) {
-    const input = toTensor(bmp, sx, sy, sw, sh);
-    const out = await m.session.run({ [m.session.inputNames[0]]: input });
-    const t = out[m.session.outputNames[0]];
-    return decode(t.data, t.dims, m.classes.length, CONF);
+    await new Promise(r => setTimeout(r, 0));                 // laat de pagina eerst tekenen en tikken verwerken
+    const out = await m.backend.run(toTensorData(bmp, sx, sy, sw, sh));
+    return decode(out.data, out.dims, m.classes.length, CONF);
   }
 
   // file: File/Blob van de camera. progress(tekst) voor statusmeldingen.
   // Geeft [{code, suit, rank, score}] terug, hoogste score eerst.
   async function detect(file, progress) {
-    progress = progress || function () {};
-    const m = await init(progress);
+    report = progress = progress || function () {};
+    const m = await init();
     const bmp = await loadBitmap(file);
     const W = bmp.width, H = bmp.height;
     progress('Kaarten zoeken…');

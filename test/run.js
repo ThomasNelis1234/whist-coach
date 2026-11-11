@@ -27,13 +27,21 @@ test('sterke abondance: 9 en 10 zeker, 11 zelden', () => {
 });
 test('lage hand is een goede miserie', () => {
   const { by } = sim('s2 s3 s5 h2 h4 h6 h7 d3 d5 d8 c2 c4 c6');
-  assert.ok(by.miserie.p > 0.7, 'miserie ' + by.miserie.p); assert.ok(by.open.p > 0.7); assert.ok(by.alleen.p < 0.05);
+  assert.ok(by.miserie.p > 0.7, 'miserie ' + by.miserie.p); assert.ok(by.open.p > 0.5, 'open ' + by.open.p); assert.ok(by.alleen.p < 0.05);
 });
 test('lange harten met A en H is géén miserie (verdediging vermijdt renonces)', () => {
   for (const position of [0, 3]) {
     const { by } = sim('hA hK hT h9 h8 h7 h4 h2 d9 d5 d4 cK c5', { position, n: 600 });
     assert.ok(by.miserie.p < 0.12, 'miserie ' + by.miserie.p); assert.ok(by.open.p < 0.12, 'open ' + by.open.p);
   }
+});
+test('miserie op tafel is nooit kansrijker dan gewone miserie; een waterdichte hand blijft 100%', () => {
+  for (const h of ['hT h9 h7 h6 h4 h3 s3 dQ d6 d5 d2 c5 c3', 's2 s3 s5 h2 h4 h6 h7 d3 d5 d8 c2 c4 c6', 'h8 h5 h2 s9 s6 s4 s2 d7 d4 d3 cJ c6 c2']) {
+    const { by } = sim(h, { position: 2 });
+    assert.ok(by.open.p <= by.miserie.p, h + ': open ' + by.open.p + ' > miserie ' + by.miserie.p);
+  }
+  const { by } = sim('s2 s3 s4 s5 h2 h3 h4 h5 d2 d3 d4 d5 c2');
+  assert.strictEqual(by.miserie.p, 1); assert.strictEqual(by.open.p, 1);
 });
 test('doorsnee hand: alles onder de passen-lijn, meegaan beter dan vragen', () => {
   const { by, res } = sim('sK s9 s4 hQ hJ h8 h3 dA d7 d2 cT c6 c5');

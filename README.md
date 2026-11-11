@@ -63,6 +63,7 @@ Open de Vercel-URL in Safari → deelknop → "Zet op beginscherm". De eerste fo
 | --- | --- |
 | `engine.js` | Rekenmotor: delen, heuristische spelers, puntentabel, Monte Carlo. Geen DOM, draait ook in Node. |
 | `detector.js` | Kaartherkenning: foto → 640×640 → ONNX-model → lijst kaarten. |
+| `detector-worker.js` | Voert het model uit in een aparte thread, zodat de pagina blijft reageren. |
 | `app.js` | Interface: kaartkiezer, instellingen, resultaten. |
 | `index.html`, `styles.css` | Pagina en opmaak (licht en donker thema). |
 | `sw.js`, `manifest.webmanifest`, `icons/` | PWA: offline gebruik en installatie. |

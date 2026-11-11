@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Whist Coach</title>
-<meta name="description" content="Slaagkans en verwachte punten per spel bij wiezen, op basis van je 13 kaarten.">
+<meta name="description" content="Winstkans en verwachte punten per spel bij wiezen, op basis van je 13 kaarten.">
 <meta name="theme-color" content="#1f6b43">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -20,7 +20,7 @@
 <div class="wrap">
   <header>
     <h1>Whist Coach</h1>
-    <p>Neem een foto van je 13 kaarten, kies de troef op tafel en je plaats, en zie per spel je slaagkans en verwachte punten volgens de puntentabel van de International World Whist Association.</p>
+    <p>Neem een foto van je 13 kaarten, kies de troef op tafel en je plaats, en zie per spel je winstkans en verwachte punten volgens de puntentabel van de International World Whist Association.</p>
   </header>
 
   <section class="card">
@@ -74,17 +74,19 @@
   </section>
 
   <section id="resultsWrap" hidden>
-    <h2>Spellen</h2>
-    <div id="results" class="results"></div>
+    <table class="spellen">
+      <thead><tr><th scope="col">Spel</th><th scope="col">Winstkans</th><th scope="col">Verwachte punten</th></tr></thead>
+      <tbody id="results"></tbody>
+    </table>
     <p id="troel" class="note" hidden></p>
   </section>
 
   <footer>
-    <p>Berekend met 2500 willekeurige verdelingen van de 39 kaarten die je niet ziet. Een slaagkans wijkt daardoor in 95% van de gevallen hoogstens 2 procentpunten af; dat zegt niets over de vuistregels zelf. De spellen staan gerangschikt op verwachte punten (kans × winst − (1 − kans) × verlies); alles onder de stippellijn levert gemiddeld minder op dan passen.</p>
+    <p>Berekend met 2500 willekeurige verdelingen van de 39 kaarten die je niet ziet. Een winstkans wijkt daardoor in 95% van de gevallen hoogstens 2 procentpunten af; dat zegt niets over de vuistregels zelf. De spellen staan gerangschikt op verwachte punten (kans × winst − (1 − kans) × verlies). Bij een negatief getal is passen gemiddeld beter.</p>
     <p>Hoe het werkt: de drie andere handen worden willekeurig gedeeld (de deler krijgt altijd minstens één troef, de keerkaart) en uitgespeeld door spelers met vaste vuistregels: troef trekken, winnaars incasseren, tweede hand laag, derde hand hoog, bij miserie zo hoog mogelijk onder de slag blijven.</p>
     <ul>
       <li>Vragen: de partner is een willekeurige medespeler met minstens één troef. Meegaan: de vrager heeft minstens 4 troeven, of 3 met aas of heer. Beide kansen gelden voor 8 slagen samen.</li>
-      <li>Miserie: de tegenspelers komen nooit uit in een kleur waar je renonce bent en spelen laag vóór jou, hoog na jou. Bij miserie op tafel kennen ze ook je rangen.</li>
+      <li>Miserie: de tegenspelers komen nooit uit in een kleur waar je renonce bent en spelen laag vóór jou, hoog na jou. Bij miserie op tafel zien ze je kaarten en kiezen ze de aanval die je het meest pijn doet; die kans is daarom nooit hoger dan bij gewone miserie.</li>
       <li>Abondance en solo: de troefkleur met de hoogste kans wordt getoond.</li>
       <li>Foto: de herkenning draait volledig op je toestel; de foto wordt nergens naartoe gestuurd.</li>
       <li>Troel wordt alleen gemeld (3 of 4 azen), niet doorgerekend. De ruil van de keerkaart bij miserie zit er nog niet in.</li>

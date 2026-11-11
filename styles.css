@@ -35,7 +35,7 @@
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
-.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; }
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 22px; grid-template-columns: minmax(0, 1fr); }
 header h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 6vw, 36px); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
 header p { margin: 4px 0 0; color: var(--muted); max-width: 60ch; }
 h2 { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
@@ -95,32 +95,27 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spac
 .progress i { display: block; height: 100%; width: 0; background: var(--felt); transition: width .1s linear; }
 .hint { color: var(--muted); font-size: 13px; }
 .note { margin: 12px 0 0; color: var(--muted); font-size: 13px; max-width: 65ch; }
-.results { display: grid; gap: 8px; }
-.res { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-.res.best { border-color: var(--felt); box-shadow: inset 3px 0 0 var(--felt); }
-.res .name { font-family: var(--display); font-weight: 700; font-size: 17px; }
-.res .tag { display: inline-block; font: 600 11px/1 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--felt); margin-left: 8px; vertical-align: middle; }
-.res .sub { color: var(--muted); font-size: 13px; }
-.res .nums { text-align: right; font-variant-numeric: tabular-nums; }
-.res .p { font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1.1; }
-.res .ev { font-size: 13px; color: var(--muted); }
-.res .ev b { font-weight: 600; }
+.spellen { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.spellen th, .spellen td { padding: 13px 8px; text-align: right; font-variant-numeric: tabular-nums; border-top: 1px solid var(--line); }
+.spellen thead th { border-top: 0; font: 500 12px/1.25 var(--body); vertical-align: bottom; color: var(--muted); padding-block: 10px; }
+.spellen th:first-child { text-align: left; }
+.spellen th:first-child { width: 100%; }   /* de naam krijgt alle ruimte; de twee getalkolommen zijn zo smal als hun inhoud */
+.spellen tbody th { font: 600 16px var(--display); }
+.spellen th:first-child { padding-left: 14px; } .spellen th:last-child, .spellen td:last-child { padding-right: 14px; }
+.spellen tbody td { font: 600 16px var(--body); white-space: nowrap; }
+.spellen .zt { font: 400 13px var(--body); color: var(--muted); }
+.spellen tr.best th, .spellen tr.best td { background: var(--felt-soft); }
 .pos { color: var(--good); } .neg { color: var(--bad); }
-.bar { grid-column: 1 / -1; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
-.bar i { display: block; height: 100%; background: var(--felt); }
-.dist { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(14, 1fr); gap: 2px; align-items: end; height: 26px; margin-top: 2px; }
-.dist b { display: block; background: var(--line); border-radius: 2px 2px 0 0; min-height: 1px; }
-.dist b.hit { background: var(--felt); }
-.dist-label { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.pass { text-align: center; color: var(--muted); font-size: 13px; padding: 4px 0; position: relative; }
-.pass::before, .pass::after { content: ""; position: absolute; top: 50%; width: calc(50% - 150px); border-top: 1px dashed var(--line); }
-.pass::before { left: 0; } .pass::after { right: 0; }
+.felt-empty.loading::before { content: ""; display: inline-block; width: 16px; height: 16px; margin-right: 10px; vertical-align: -3px;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .felt-empty.loading::before { animation-duration: 2.4s; } }
+.ghost[disabled] { opacity: .5; cursor: default; }
 footer { color: var(--muted); font-size: 12px; max-width: 70ch; border-top: 1px solid var(--line); padding-top: 14px; }
 footer p { margin: 0 0 8px; }
 footer ul { margin: 0; padding-left: 18px; }
 @media (max-width: 480px) {
   .chip { font-size: 12px; padding: 10px 0; }
   .seg button { font-size: 13px; padding: 10px 2px; }
-  .pass::before, .pass::after { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .chip, .progress i { transition: none; } }

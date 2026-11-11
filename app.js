@@ -7,7 +7,7 @@
   const TXT = '︎';                       // dwingt het tekstsymbool af (geen emoji op iOS)
   const N_DEALS = 2500;                       // 95%-foutmarge op een kans: hoogstens ±2 procentpunt
   const isRed = s => s === 1 || s === 2;
-  const state = { hand: new Set(), trump: 3, pos: 0, unsure: new Set() };
+  const state = { hand: new Set(), trump: 3, pos: 0, unsure: new Set(), loading: false, loadingText: '' };
   let sim = null, timer = null;
 
   const $ = id => document.getElementById(id);
@@ -55,11 +55,16 @@
       el.innerHTML = '<span class="ix"><b>' + (RL[r] || r) + '</b><i>' + sym + '</i></span><span class="pip">' + sym + '</span>';
       fan.appendChild(el);
     }
-    fan.hidden = n === 0; $('fanEmpty').hidden = n !== 0;
+    const empty = $('fanEmpty');
+    fan.hidden = n === 0 || state.loading; empty.hidden = !fan.hidden;
+    empty.classList.toggle('loading', state.loading);
+    empty.textContent = state.loading ? (state.loadingText || 'Je kaarten worden gelezen…') : 'Nog geen kaarten. Neem een foto of kies ze zelf.';
     for (const b of rows.querySelectorAll('.chip')) b.classList.toggle('on', state.hand.has(+b.dataset.c));
-    $('count').textContent = n + '/13'; $('count').classList.toggle('ok', n === 13);
-    $('btnRun').disabled = n !== 13;
-    $('status').textContent = n === 13 ? '' : 'Nog ' + (13 - n) + ' kaart' + (13 - n === 1 ? '' : 'en') + ' te kiezen.';
+    $('count').textContent = state.loading ? '' : n + '/13'; $('count').classList.toggle('ok', n === 13);
+    $('btnRun').disabled = n !== 13 || state.loading;
+    $('btnEdit').disabled = state.loading; $('btnPhoto').disabled = state.loading;
+    $('status').textContent = state.loading ? 'Je kunt intussen al troef en plaats kiezen.'
+      : n === 13 ? '' : 'Nog ' + (13 - n) + ' kaart' + (13 - n === 1 ? '' : 'en') + ' te kiezen.';
   }
   // Elke wijziging aan kaarten, troef of plaats maakt een eerder resultaat ongeldig: verberg het tot er opnieuw gerekend is.
   function changed() {
@@ -110,38 +115,30 @@
   const fmtP = p => Math.round(p * 100) + '%';
   const fmtEV = v => (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',');
 
-  // Gerangschikt op verwachte punten; de stippellijn is passen (0 punten).
+  // Eén rij per spel: naam, winstkans, verwachte punten. Gerangschikt op verwachte punten.
+  function spelNaam(c) {
+    if (c.suit === undefined) return c.name;
+    if (c.suit < 0) return c.name + ' <span class="zt">zonder troef</span>';
+    return c.name + '\u00A0<span class="' + (isRed(c.suit) ? 'red' : 'black') + '">' + E.SUIT_SYM[c.suit] + TXT + '</span>';
+  }
   function show(res) {
     const list = res.contracts.slice().sort((a, b) => b.ev - a.ev);
-    const box = $('results'); box.innerHTML = ''; $('resultsWrap').hidden = false;
-    let passShown = false;
-    const pass = () => { const p = document.createElement('div'); p.className = 'pass'; p.textContent = 'Passen · 0 punten'; box.appendChild(p); passShown = true; };
+    const body = $('results'); body.innerHTML = '';
     list.forEach((c, i) => {
-      if (!passShown && c.ev <= 0) pass();
-      const isBest = i === 0 && c.ev > 0;
-      const el = document.createElement('article'); el.className = 'res' + (isBest ? ' best' : '');
-      const dist = c.dist.map((v, t) => `<b class="${hitClass(c, t)}" style="height:${Math.max(4, Math.round(v * 100))}%" title="${t} slagen: ${fmtP(v)}"></b>`).join('');
-      el.innerHTML = `
-        <div><div class="name">${c.name}${isBest ? '<span class="tag">Beste keuze</span>' : ''}</div><div class="sub">${c.sub}</div></div>
-        <div class="nums"><div class="p ${c.p >= 0.5 ? 'pos' : ''}">${fmtP(c.p)}</div><div class="ev">verwacht <b class="${c.ev >= 0 ? 'pos' : 'neg'}">${fmtEV(c.ev)}</b> pt</div></div>
-        <div class="bar"><i style="width:${c.p * 100}%"></i></div>
-        <div class="dist">${dist}</div>
-        <div class="dist-label"><span>0 slagen</span><span>${c.id === 'vragen' || c.id === 'meegaan' ? 'samen met partner' : 'hoe vaak je hoeveel slagen haalt'}</span><span>13</span></div>`;
-      box.appendChild(el);
+      const tr = document.createElement('tr');
+      if (i === 0 && c.ev > 0) tr.className = 'best';
+      tr.innerHTML = '<th scope="row">' + spelNaam(c) + '</th><td>' + fmtP(c.p) + '</td><td class="' + (c.ev >= 0 ? 'pos' : 'neg') + '">' + fmtEV(c.ev) + '</td>';
+      body.appendChild(tr);
     });
-    if (!passShown) pass();
+    $('resultsWrap').hidden = false;
     const aces = [...state.hand].filter(c => E.rankOf(c) === 14).length;
     const note = $('troel'); note.hidden = aces < 3;
     if (aces >= 3) note.textContent = 'Je hebt ' + aces + ' azen. Volgens de regels moet je dan ' + (aces === 4 ? 'troela' : 'troel') +
       ' melden zodra de troefkaart omgedraaid is. Dat is hierboven niet doorgerekend; de spellen tonen wat je kaarten los daarvan waard zijn.';
     $('resultsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  function hitClass(c, t) {
-    if (c.type === 'misere') return t === 0 ? 'hit' : '';
-    return t >= c.target ? 'hit' : '';
-  }
 
-  /* ---------- foto → kaarten via lokaal ONNX-model (detector.js) ---------- */
+  /* ---------- foto → kaarten via lokaal ONNX-model (detector.js, rekent in een worker) ---------- */
   (function () {
     const btn = $('btnPhoto'), input = $('photo'), msg = $('photoMsg');
     const say = t => { msg.hidden = false; msg.textContent = t; };
@@ -150,24 +147,37 @@
       const file = input.files && input.files[0];
       if (!file) return;
       input.value = '';
-      btn.disabled = true;
+      // Toon meteen dat er gelezen wordt: de vorige hand en het vorige resultaat verdwijnen.
+      const prev = { hand: state.hand, unsure: state.unsure };
+      state.hand = new Set(); state.unsure = new Set();
+      state.loading = true; state.loadingText = ''; msg.hidden = true; setEditor(false);
+      changed();
+      let after = '', openEditor = false;
       try {
-        const found = (await window.WiezenDetector.detect(file, say)).slice(0, 13);
-        if (!found.length) { say('Geen kaarten herkend. Probeer een scherpere foto waarop van elke kaart de hoek zichtbaar is.'); return; }
-        state.hand = new Set(found.map(f => E.mk(f.suit, f.rank)));
-        state.unsure = new Set(found.filter(f => f.score < 0.5).map(f => E.mk(f.suit, f.rank)));
-        changed();
-        const n = state.hand.size;
-        if (n === 13 && !state.unsure.size) say('13 kaarten herkend. Klopt er een niet? Tik op "Kaarten aanpassen".');
-        else {
-          say(n + ' kaart' + (n === 1 ? '' : 'en') + ' herkend' + (n === 13 ? '' : ', geen 13') +
-            (state.unsure.size ? '; de oranje omrande kaarten zijn onzeker' : '') + '. Verbeter ze hieronder.');
-          setEditor(true);
+        const found = (await window.WiezenDetector.detect(file, t => { state.loadingText = t; render(); })).slice(0, 13);
+        if (!found.length) {
+          state.hand = prev.hand; state.unsure = prev.unsure;
+          after = 'Geen kaarten herkend. Probeer een scherpere foto waarop van elke kaart de hoek zichtbaar is.';
+        } else {
+          state.hand = new Set(found.map(f => E.mk(f.suit, f.rank)));
+          state.unsure = new Set(found.filter(f => f.score < 0.5).map(f => E.mk(f.suit, f.rank)));
+          const n = state.hand.size;
+          if (n === 13 && !state.unsure.size) after = '13 kaarten herkend. Klopt er een niet? Tik op "Kaarten aanpassen".';
+          else {
+            after = n + ' kaart' + (n === 1 ? '' : 'en') + ' herkend' + (n === 13 ? '' : ', geen 13') +
+              (state.unsure.size ? '; de oranje omrande kaarten zijn onzeker' : '') + '. Verbeter ze hieronder.';
+            openEditor = true;
+          }
         }
       } catch (e) {
-        say((e && e.userMessage) || 'Het lezen is mislukt. Probeer het opnieuw of kies de kaarten zelf.');
+        state.hand = prev.hand; state.unsure = prev.unsure;
+        after = (e && e.userMessage) || 'Het lezen is mislukt. Probeer het opnieuw of kies de kaarten zelf.';
         console.error(e);
-      } finally { btn.disabled = false; }
+      } finally {
+        state.loading = false;
+        changed();
+        say(after); if (openEditor) setEditor(true);
+      }
     });
   })();
 
